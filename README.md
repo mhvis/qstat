@@ -1,0 +1,2 @@
+# ldapstat
+Specific purpose app.
