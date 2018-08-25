@@ -109,7 +109,7 @@ def refresh_stats():
             dutch += 1
         if member['preferredLanguage'].lower().startswith("en"):
             english += 1
-    new_stat_string += str(dutch) + " mensen sprekend Nederlands, " + str(english) + " spreken Engels.\n"
+    new_stat_string += str(dutch) + " mensen spreken Nederlands, " + str(english) + " spreken Engels.\n"
 
     # Apply
     stat_string = new_stat_string
