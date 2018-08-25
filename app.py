@@ -47,7 +47,7 @@ def refresh_stats():
         member['qDateOfBirth'] = date(year, month, day)
 
     # Start new stat string
-    new_stat_string = 'Live stats:\n'
+    new_stat_string = 'Live random stats:\n'
 
     # Aantal leden
     new_stat_string += "We hebben nu " + str(len(current_member_dict)) + " leden.\n"
