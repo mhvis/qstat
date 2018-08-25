@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Q stats</title>
+</head>
+<body>
+    {% if refresh == "ok" %}
+    <em>Stats refreshed.</em>
+    {% elif refresh == "toosoon" %}
+    <em>Too recently refreshed, wait 5 minutes.</em>
+    {% endif %}
+
+    <p>{{stat_string|replace("\n","<br>"|safe)}}</p>
+
+    <form method="post" action=""><button type="submit" name="refresh" value="refresh">Refresh stats</button></form>
+
+    <a href="https://github.com/mhvis/ldapstat">Code @ GitHub</a>
+</body>
+</html>
