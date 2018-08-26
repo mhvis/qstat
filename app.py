@@ -33,12 +33,18 @@ def refresh_stats():
     global stat_string
     conn = Connection(ldap_server, ldap_binddn, ldap_bindpass, authentication=SIMPLE, read_only=True,
                       raise_exceptions=True, auto_bind=True, check_names=True)
+    # Fetch people
     conn.search('ou=People,dc=esmgquadrivium,dc=nl', '(memberOf=cn=Current members,ou=Groups,dc=esmgquadrivium,dc=nl)',
                 LEVEL, attributes=ALL_ATTRIBUTES)
-    current_member_dict = {entry['dn']: entry['attributes'] for entry in conn.response if entry['type'] == 'searchResEntry'}
+    people_dict = { entry['dn'].lower(): entry['attributes']
+                            for entry in conn.response if entry['type'] == 'searchResEntry' }
+    # Fetch groups
+    conn.search('ou=Groups,dc=esmgquadrivium,dc=nl', '(objectClass=esmgqGroup)', LEVEL, attributes=ALL_ATTRIBUTES)
+    groups_dict = {entry['dn'].lower(): entry['attributes']
+                   for entry in conn.response if entry['type'] == 'searchResEntry'}
 
     # Convert date of birth to Python datetime (in place)
-    for member in current_member_dict.values():
+    for member in people_dict.values():
         if not 'qDateOfBirth' in member:
             continue
         year = member['qDateOfBirth'] // 10000
@@ -47,16 +53,16 @@ def refresh_stats():
         member['qDateOfBirth'] = date(year, month, day)
 
     # Start new stat string
-    new_stat_string = 'Live random stats:\n'
+    new_stat_string = 'Live random stats (gegenereerd uit de database):\n'
 
     # Aantal leden
-    new_stat_string += "We hebben nu " + str(len(current_member_dict)) + " leden.\n"
+    new_stat_string += "We hebben nu " + str(len(people_dict)) + " leden.\n"
 
     # Volgende verjaardagen
     who = []
     delta = 10000
     today = date.today()
-    for member in current_member_dict.values():
+    for member in people_dict.values():
         if not 'qDateOfBirth' in member:
             continue
         dob = member['qDateOfBirth']
@@ -64,10 +70,10 @@ def refresh_stats():
         birthday = date(today.year + 1 if birthday_in_next_year else today.year, dob.month, dob.day)
         bd_delta = (birthday - today).days
         if bd_delta < delta:
-            who = [member['cn'][0]]
+            who = [member['givenName'][0]]
             delta = bd_delta
         elif bd_delta == delta:
-            who.append(member['cn'][0])
+            who.append(member['givenName'][0])
     plural = len(who) > 1
     who_string = (" en ").join(who)
     if delta == 0:
@@ -88,7 +94,7 @@ def refresh_stats():
 
     # Instrument/voice
     instrument_cnt = Counter()
-    for member in current_member_dict.values():
+    for member in people_dict.values():
         if not 'qInstrumentVoice' in member:
             continue
         for instrument in member['qInstrumentVoice']:
@@ -102,7 +108,7 @@ def refresh_stats():
     # English/Dutch
     english = 0
     dutch = 0
-    for member in current_member_dict.values():
+    for member in people_dict.values():
         if not 'preferredLanguage' in member:
             continue
         if member['preferredLanguage'].lower().startswith("nl"):
@@ -111,5 +117,26 @@ def refresh_stats():
             english += 1
     new_stat_string += str(dutch) + " mensen spreken Nederlands, " + str(english) + " spreken Engels.\n"
 
+    # Group summary
+    new_stat_string += "\n"
+    new_stat_string += group_summary(groups_dict, people_dict)
+
     # Apply
     stat_string = new_stat_string
+
+def group_summary(groups_dict, people_dict):
+    exclude_groups = {'Current members', 'Archivarissen', 'Secretaris', 'Penningmeester', 'Voorzitter',
+                      'Violin players'}
+
+    summary = "Groepjesoverzicht (uit database, gelinkt aan maillijst):\n"
+    for group in groups_dict.values():
+        if group['cn'][0] in exclude_groups or 'uniqueMember' not in group:
+            continue
+
+        group_name = group['cn'][0]
+        group_members = [people_dict[member_dn.lower()]['givenName'][0] for member_dn in group['uniqueMember']]
+        summary += "- " + group_name + ": "
+        if len(group_members) > 1:
+            summary += ", ".join(group_members[1:]) + " en "
+        summary += group_members[0] + "\n"
+    return summary
