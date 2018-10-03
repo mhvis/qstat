@@ -21,12 +21,20 @@ def index():
             refreshed = 'ok'
         else:
             refreshed = 'toosoon'
+    elif should_refresh():
+        refresh_stats()
+        last_refresh = datetime.now()
+        refreshed = 'ok'
 
     return render_template('index.html', refresh=refreshed, stat_string=stat_string)
 
 
 def allow_refresh():
     return (datetime.now() - last_refresh).total_seconds() > 5 * 60
+
+
+def should_refresh():
+    return (datetime.now() - last_refresh).total_seconds() > 5 * 60 * 60
 
 
 def refresh_stats():
